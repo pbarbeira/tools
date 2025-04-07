@@ -7,27 +7,54 @@
 
 #include <regex>
 #include "Logger.h"
+#include "StringUtils.h"
 
 struct Options{
     std::string filename;
     char delimiter = '\t';
-    unsigned int field{};
+    std::vector<unsigned int> fields;
+    bool stdin = false;
 };
 
 inline std::regex pattern(R"(.*?\.(csv|tsv))");
+inline std::regex csv_pattern(R"(-f\d*(,\d*)*)");
+inline std::regex ssv_pattern(R"(-f"\d*(\s\d*)*")");
 
 class OptionsParser{
+    static void _handleFieldInput(Options* options, const std::string& arg, Logger* logger, bool ssv = false) {
+        char delim = ssv ? ' ' : ',';
+        //if ssv we remove -f" and final ", otherwise only -f
+        std::string input = arg.substr(ssv ? 3 : 2, arg.size() - (ssv ? 4 : 2));
+        const auto tokens = StringUtils::split(input, delim);
+        for (const auto& token : tokens) {
+            const int field = std::stoi(token);
+            if (field == 0) {
+                logger->log(INFO, "-f option must be positive integer");
+                throw std::invalid_argument("Invalid value [-f]");
+            }
+            options->fields.push_back(field);
+        }
+    }
+
     static void _handleField(Options* options, const std::string& arg, Logger* logger){
         if(arg.size() < 3){
-            logger->log(LogLevel::ERROR, "-f option must have at least one target field");
+            logger->log(INFO, "-f option must have at least one target field");
             throw std::invalid_argument("Unspecified value [-f]");
         }
-        options->field = std::stoi(arg.substr(2, arg.size() - 2));
+        if (std::regex_match(arg, csv_pattern)) {
+            _handleFieldInput(options, arg, logger);
+            return;
+        }
+        if (std::regex_match(arg, ssv_pattern)) {
+            _handleFieldInput(options, arg, logger, true);
+            return;
+        }
+        throw std::invalid_argument("Invalid value [-f]");
     }
 
     static void _handleDelimiter(Options* options, const std::string& arg, Logger* logger){
         if(arg.size() != 3){
-            logger->log(LogLevel::ERROR, "-d option must have one delimiting character");
+            logger->log(INFO, "-d option must have one delimiting character");
             throw std::invalid_argument("Unspecified value [-d]");
         }
         options->delimiter = arg[2];
@@ -36,11 +63,10 @@ class OptionsParser{
         static std::unique_ptr<Options> parse(const int argc, char* argv[], Logger* logger){
             if(argc < 3){
                 std::stringstream ss;
-                ss << "Usage:\n\t"
-                   << argv[0] << " [-f]<fields> <filename>\n\t"
-                   << argv[0] << " [-f]<fields> [-d]<delimitir> <filename>\n\t"
-                   << std::endl;
-                logger->log(LogLevel::ERROR, ss.str());
+                ss << "\n\tUsage:\n\t"
+                   << "\tcccut [-f]<fields> <filename>\n\t"
+                   << "\tcccut [-f]<fields> [-d]<delimitir> <filename>";
+                logger->log(INFO, ss.str());
                 throw std::runtime_error("Invalid usage");
             }
             auto options = std::make_unique<Options>();
@@ -52,12 +78,16 @@ class OptionsParser{
                 if(arg.contains("-d")){
                     _handleDelimiter(options.get(), arg, logger);
                 }
-                if(std::regex_match(arg, pattern)){
-                    options->filename = arg;
+                if (arg[0] != '-') {
+                    if(std::regex_match(arg, pattern)){
+                        options->filename = arg;
+                        continue;
+                    }
+                    throw std::invalid_argument("Invalid file name");
                 }
             }
             if (options->filename.empty()) {
-                throw std::invalid_argument("Filename not specified");
+                options->stdin = true;
             }
             return std::move(options);
         };

@@ -44,13 +44,15 @@ TEST(OptionsParserTest, ThrowOnInvalidFilename) {
     } catch(const std::exception& e){}
 }
 
-TEST(OptionsParserTest, ThrowOnNoFilename) {
+TEST(OptionsParserTest, OptionsNoFilename) {
     const auto logger = std::make_unique<StringLogger>();
     try{
         char* argv[] = { "main", "-d.", "-f1" };
         const auto options = OptionsParser::parse(3, argv, logger.get());
+        EXPECT_EQ(options->stdin, true);
+    } catch(const std::exception& e) {
         FAIL();
-    } catch(const std::exception& e){}
+    }
 }
 
 TEST(OptionsParserTest, HandleField) {
@@ -60,7 +62,8 @@ TEST(OptionsParserTest, HandleField) {
         const auto options = OptionsParser::parse(3, argv, logger.get());
 
         EXPECT_EQ(options->filename, "filename.csv");
-        EXPECT_EQ(options->field, 1);
+        EXPECT_EQ(options->fields.size(), 1);
+        EXPECT_EQ(options->fields[0], 1);
     } catch(const std::exception& e){
         FAIL();
     }
@@ -87,7 +90,39 @@ TEST(OptionsParserTest, HandleFieldAndDelimiter) {
 
         EXPECT_EQ(options->filename, "filename.csv");
         EXPECT_EQ(options->delimiter, '.');
-        EXPECT_EQ(options->field, 1);
+        EXPECT_EQ(options->fields.size(), 1);
+        EXPECT_EQ(options->fields[0], 1);
+    } catch(const std::exception& e){
+        FAIL();
+    }
+}
+TEST(OptionsParserTest, HandleMultiFieldCommaSeparated) {
+    try{
+        const auto logger = std::make_unique<StringLogger>();
+        char* argv[] = { "main", "-f1,2", "filename.csv" };
+        const auto options = OptionsParser::parse(3, argv, logger.get());
+
+        EXPECT_EQ(options->filename, "filename.csv");
+        EXPECT_EQ(options->delimiter, '\t');
+        EXPECT_EQ(options->fields.size(), 2);
+        EXPECT_EQ(options->fields[0], 1);
+        EXPECT_EQ(options->fields[1], 2);
+    } catch(const std::exception& e){
+        FAIL();
+    }
+}
+
+TEST(OptionsParserTest, HandleMultiFieldSpaceSeparated) {
+    try{
+        const auto logger = std::make_unique<StringLogger>();
+        char* argv[] = { "main", "-f\"1 2\"", "filename.csv" };
+        const auto options = OptionsParser::parse(3, argv, logger.get());
+
+        EXPECT_EQ(options->filename, "filename.csv");
+        EXPECT_EQ(options->delimiter, '\t');
+        EXPECT_EQ(options->fields.size(), 2);
+        EXPECT_EQ(options->fields[0], 1);
+        EXPECT_EQ(options->fields[1], 2);
     } catch(const std::exception& e){
         FAIL();
     }

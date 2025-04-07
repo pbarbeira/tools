@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 #include <chrono>
+#include <ctime>
 
 enum LogLevel{
     ERROR, WARNING, INFO, DEBUG
@@ -15,7 +16,7 @@ enum LogLevel{
 
 struct Log{
     LogLevel level{};
-    time_t timestamp{};
+    std::chrono::system_clock::time_point timestamp;;
     std::string message;
 };
 
@@ -25,7 +26,12 @@ class Logger{
     std::vector<std::unique_ptr<Log>> _logs;
 
     static std::string _buildLogMessage(const Log* log) {
-        auto logTime = std::put_time(std::localtime(&log->timestamp), "%Y-%m-%d %H:%M:%S");
+        auto timestamp = std::chrono::system_clock::to_time_t(log->timestamp);
+        auto logTime = std::put_time(std::localtime(&timestamp), "%Y-%m-%d %H:%M:%S");
+
+        auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(log->timestamp.time_since_epoch()) % 1000;
+        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(log->timestamp.time_since_epoch()) % 1000;
+
         std::string logLevel;
         switch (log->level) {
             case ERROR: logLevel = "ERROR"; break;
@@ -35,7 +41,10 @@ class Logger{
             default: throw std::runtime_error("Unknown log level");
         }
         std::stringstream ss;
-        ss << "[" << logTime << "] - [" << logLevel << "]::" << log->message << "\n";
+        ss << "[" << logTime
+            << "." << std::setw(3) << std::setfill('0') << ms.count()
+            << "." << std::setw(3) << std::setfill('0') << ns.count()
+            << "] - [" << logLevel << "] " << log->message << "\n";
         return ss.str();
     }
 
@@ -52,7 +61,7 @@ class Logger{
             auto log = std::make_unique<Log>();
             log->level = level;
             log->message = message;
-            log->timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+            log->timestamp = std::chrono::system_clock::now();
             if (level <= _level) {
                 _out << _buildLogMessage(log.get());
             }
