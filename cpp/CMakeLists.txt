@@ -15,19 +15,19 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-add_executable(run_tests test/test_main.cpp
+add_executable(run_all test/test_main.cpp
         test/unit_Reader.cpp
         test/unit_Options.cpp
         test/unit_Logger.cpp
 )
 
-add_executable(run_reader_tests test/test_main.cpp test/unit_Reader.cpp)
-add_executable(run_options_tests test/test_main.cpp test/unit_Options.cpp)
-add_executable(run_logger_tests test/test_main.cpp test/unit_Logger.cpp)
+add_executable(run_unit_reader test/test_main.cpp test/unit_Reader.cpp)
+add_executable(run_unit_options test/test_main.cpp test/unit_Options.cpp)
+add_executable(run_unit_logger test/test_main.cpp test/unit_Logger.cpp)
 
-target_link_libraries(run_tests gtest gmock gtest_main)
-target_link_libraries(run_reader_tests gtest gmock gtest_main)
-target_link_libraries(run_options_tests gtest gmock gtest_main)
-target_link_libraries(run_logger_tests gtest gmock gtest_main)
+target_link_libraries(run_all gtest gmock gtest_main)
+target_link_libraries(run_unit_reader gtest gmock gtest_main)
+target_link_libraries(run_unit_options gtest gmock gtest_main)
+target_link_libraries(run_unit_logger gtest gmock gtest_main)
 
 add_executable(tools src/main.cpp)

@@ -118,15 +118,15 @@ TEST(LoggerTest, CanLogToOstream){
     const std::string MESSAGE = "Debug message";
     const auto logger = std::make_unique<StringLogger>();
 
-    logger->log(LogLevel::DEBUG, MESSAGE);
-
-    const auto logs = logger->getLogs();
-    EXPECT_EQ(logs.size(), 1);
+    logger->log(DEBUG, MESSAGE);
 
     std::string log = logger->dump();
     //we purposely remove final \n
     log = log.substr(0, log.size() - 1);
     EXPECT_EQ(std::regex_match(log, debugPattern), true);
+
+    const auto logs = logger->getLogs();
+    EXPECT_EQ(logs.size(), 1);
     EXPECT_EQ(logs[0]->level, LogLevel::DEBUG);
     EXPECT_EQ(logs[0]->message, MESSAGE);
 }
